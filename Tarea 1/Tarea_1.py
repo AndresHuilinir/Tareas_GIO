@@ -1,6 +1,6 @@
 import numpy as np
 
-numero_de_grupo = 3
+numero_de_grupo = 14
 
 rng = np.random.default_rng(numero_de_grupo)
 
@@ -56,7 +56,7 @@ for k_ in range(k):
 
 S_m = []
 for m_ in range(M_0):
-    S_m.append(generar_normal(6,6*0.05))
+    S_m.append(generar_normal(6,6*0.05,es_entero=False))
 
 V_max = 0.1
 O_max = 0.3
@@ -71,13 +71,43 @@ C_I1 = generar_normal(45000000,0.05*45000000)
 C_p1 = generar_normal(2500,0.05*2500)
 C_lost1 = generar_normal(1200,0.05*1200)
 
-#dado que cada t es un trimestre, el periodo total son 8 años
 InfProm = generar_normal(0.04,0.002*0.002,0.03,False, 0.05)
 R = generar_normal(0.10,0.005*0.005,0.09,False, 0.11)
 
 pi_min = (1+InfProm)**0.25 -1
 r = (1+R)**0.25 -1
 
+def costo_en_el_tiempo(Variable_x):
+    lista = [Variable_x]
+    for t in range(2,T+1):
+        lista.append(Variable_x*(1+pi_min)**(t-1))
+    return lista
+
+def valor_presente(Variable_x):
+    lista = [Variable_x]
+    for t in range(2,T+1):
+        lista.append(Variable_x*((1+pi_min)/(1+r))**(t-1))
+    return lista
+
 print(f"p_1 = {p_1}")
 print(f"p_2 = {p_2}")
 print(f"alfa = {alfa}")
+print(f"S_p = {S_p}")
+print(f"u = {u}")
+print(f"S_yk = {S_yk}")
+print(f"S_m = {S_m}")
+print(f"V_max = {V_max}")
+print(f"O_max = {O_max}")
+print(f"C_m11 = {C_m11}")
+print(f"C_m21 = {C_m21}")
+print(f"C_hire1 = {C_hire1}")
+print(f"C_fire1 = {C_fire1}")
+print(f"C_sal1 = {C_sal1}")
+print(f"C_r1 = {C_r1}")
+print(f"C_I1 = {C_I1}")
+print(f"C_p1 = {C_p1}")
+print(f"C_lost1 = {C_lost1}")
+print(f"InfProm = {InfProm}")
+print(f"R = {R}")
+print(f"pi_min = {pi_min}")
+print(f"r = {r}")
