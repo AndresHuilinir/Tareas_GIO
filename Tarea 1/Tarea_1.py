@@ -48,18 +48,18 @@ alfa = generar_normal(0.1,0.15*0.1,es_entero=False)
 S_p = []
 for p_ in range(p):
     S_p.append(generar_normal(100,0.05*100))
-    print(f"S_p_{p_ + 1} = {S_p[-1]}")
+    print(f"S_p_{p_+1} = {S_p[-1]}")
 
 u = 0.7
 S_yk = []
 for k_ in range(k):
     S_yk.append(generar_normal(15,0.05*15))
-    print(f"S_yk_{k_ + 1} = {S_yk[-1]}")
+    print(f"S_yk_{k_+1} = {S_yk[-1]}")
 
 S_m = []
 for m_ in range(M_0):
     S_m.append(generar_normal(6,6*0.05))
-    print(f"S_m_{m_ + 1} = {S_m[-1]}")
+    print(f"S_m_{m_+1} = {S_m[-1]}")
 
 V_max = 0.1
 O_max = 0.3
