@@ -1,7 +1,9 @@
 import numpy as np
+import pyomo.environ as pyo
+
+modelo = pyo.ConcreteModel()
 
 numero_de_grupo = 14
-
 rng = np.random.default_rng(numero_de_grupo)
 
 def generar_normal(mu, sigma, limite_inferior=0, es_entero=True, limite_superior=None):
@@ -19,14 +21,23 @@ def generar_uniforme(a, b, es_entero=False):
         valor = max(0, round(valor))
     return valor
 
+#conjuntos
 T= 24
+modelo.T = pyo.RangeSet(1, T)
 p = 3 
-k = 2 
-M_0 = 8 
+modelo.P = pyo.RangeSet(1, p)
+k = 2
+modelo.K = pyo.RangeSet(1, k)
+M_0 = 8
+modelo.M = pyo.RangeSet(1, M_0)
+
+#parametros
 Y_01 = 2 
 Y_02 = 1
 
 H = 480
+modelo.H = pyo.Param(initialize=H)
+
 d_1 = generar_normal(2500,0.05*25000,1)
 r_t = generar_uniforme(1.02, 1.04)
 d_t = [d_1]
@@ -41,6 +52,8 @@ for t in range(2, T+1):
     r_t = generar_uniforme(1.02, 1.04)
     print(f"r_{t} = {r_t}\n")
 
+modelo.d = pyo.Param(modelo.T, initialize=lambda m, t: d_t[t-1])
+
 p_1 = generar_normal(6000,0.05*6000)
 p_2 = generar_normal(11500,0.05*11500)
 alfa = generar_normal(0.1,0.15*0.1,es_entero=False)
@@ -50,17 +63,24 @@ for p_ in range(p):
     S_p.append(generar_normal(100,0.05*100))
     print(f"S_p_{p_+1} = {S_p[-1]}")
 
+modelo.S_p = pyo.Param(modelo.P, initialize=lambda m, i: S_p[i-1])
+print("\n")
 u = 0.7
+modelo.u = pyo.Param(initialize=u)
 S_yk = []
 for k_ in range(k):
     S_yk.append(generar_normal(15,0.05*15))
     print(f"S_yk_{k_+1} = {S_yk[-1]}")
 
+modelo.S_yk = pyo.Param(modelo.K, initialize=lambda m, i: S_yk[i-1])
+print("\n")
 S_m = []
 for m_ in range(M_0):
     S_m.append(generar_normal(6,6*0.05))
     print(f"S_m_{m_+1} = {S_m[-1]}")
 
+modelo.S_m = pyo.Param(modelo.M, initialize=lambda m, i: S_m[i-1])
+print("\n")
 V_max = 0.1
 O_max = 0.3
 
