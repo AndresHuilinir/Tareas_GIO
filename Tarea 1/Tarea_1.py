@@ -48,15 +48,18 @@ alfa = generar_normal(0.1,0.15*0.1,es_entero=False)
 S_p = []
 for p_ in range(p):
     S_p.append(generar_normal(100,0.05*100))
+    print(f"S_p_{p_ + 1} = {S_p[-1]}")
 
 u = 0.7
 S_yk = []
 for k_ in range(k):
     S_yk.append(generar_normal(15,0.05*15))
+    print(f"S_yk_{k_ + 1} = {S_yk[-1]}")
 
 S_m = []
 for m_ in range(M_0):
-    S_m.append(generar_normal(6,6*0.05,es_entero=False))
+    S_m.append(generar_normal(6,6*0.05))
+    print(f"S_m_{m_ + 1} = {S_m[-1]}")
 
 V_max = 0.1
 O_max = 0.3
@@ -79,23 +82,24 @@ r = (1+R)**0.25 -1
 
 def costo_en_el_tiempo(Variable_x):
     lista = [Variable_x]
+    print(f"costo_1 = {lista[-1]}")
     for t in range(2,T+1):
         lista.append(Variable_x*(1+pi_min)**(t-1))
+        print(f"costo_{t} = {lista[-1]}")
     return lista
 
 def valor_presente(Variable_x):
     lista = [Variable_x]
+    print(f"vp_1 = {lista[-1]}")
     for t in range(2,T+1):
         lista.append(Variable_x*((1+pi_min)/(1+r))**(t-1))
+        print(f"vp_{t} = {lista[-1]}")
     return lista
 
 print(f"p_1 = {p_1}")
 print(f"p_2 = {p_2}")
 print(f"alfa = {alfa}")
-print(f"S_p = {S_p}")
 print(f"u = {u}")
-print(f"S_yk = {S_yk}")
-print(f"S_m = {S_m}")
 print(f"V_max = {V_max}")
 print(f"O_max = {O_max}")
 print(f"C_m11 = {C_m11}")
