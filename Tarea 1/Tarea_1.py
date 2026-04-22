@@ -35,20 +35,10 @@ def C_mt(m, k, t):
     elif k == 2:
         return C_m21
 
-def costo_en_el_tiempo(Variable_contexto):
-    lista = [Variable_contexto]
-    print(f"costo_1 = {lista[-1]}")
-    for t in range(2,T+1):
-        lista.append(Variable_contexto*(1+pi_min)**(t-1))
-        print(f"costo_{t} = {lista[-1]}")
-    return lista
-
 def valor_presente(Variable_contexto):
     lista = [Variable_contexto]
-    print(f"vp_1 = {lista[-1]}")
     for t in range(2,T+1):
         lista.append(Variable_contexto*((1+pi_min)/(1+r))**(t-1))
-        print(f"vp_{t} = {lista[-1]}")
     return lista
 
 #conjuntos
@@ -107,7 +97,7 @@ modelo.S_yk = pyo.Param(modelo.K, initialize=lambda m, i: S_yk[i-1])
 
 S_m = [] #superficie por operario
 for m_ in range(M_0):
-    S_m.append(generar_normal(6,6*0.05))
+    S_m.append(generar_normal(6,6*0.05,es_entero=False))
 
 modelo.S_m = pyo.Param(modelo.M, initialize=lambda m, i: S_m[i-1])
 
