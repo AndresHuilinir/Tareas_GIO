@@ -82,7 +82,7 @@ modelo.alfa = pyo.Param(initialize=alfa)
 
 S_p = [] #superficie total por planta
 for p_ in range(p):
-    S_p.append(generar_normal(100,0.05*100))
+    S_p.append(generar_normal(100,0.05*100,es_entero=False))
 
 modelo.S_p = pyo.Param(modelo.P, initialize=lambda m, i: S_p[i-1])
 
@@ -91,7 +91,7 @@ modelo.u = pyo.Param(initialize=u)
 
 S_yk = [] #superficie por maquina tipo k
 for k_ in range(k):
-    S_yk.append(generar_normal(15,0.05*15))
+    S_yk.append(generar_normal(15,0.05*15,es_entero=False))
 
 modelo.S_yk = pyo.Param(modelo.K, initialize=lambda m, i: S_yk[i-1])
 
@@ -137,5 +137,16 @@ modelo.C_p = pyo.Param(modelo.T, initialize=lambda m, t: C_p_vp[t-1]) #
 modelo.C_lost = pyo.Param(modelo.T, initialize=lambda m, t: C_lost_vp[t-1])
 
 modelo.pprint()
+#Variables
+
+modelo.x_t = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
+modelo.l_t = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
+modelo.m_kt = pyo.Var(modelo.K,modelo.T, domain=pyo.NonNegativeIntegers)
+modelo.Y_kt = pyo.Var(modelo.K,modelo.T, domain=pyo.NonNegativeIntegers)
+modelo.h_t = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
+modelo.f_k = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
+modelo.W_t = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
+modelo.n_t = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
+modelo.P_t = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
 
 #A partir de aca abajo hago modelos, arriba pura variable e.e
