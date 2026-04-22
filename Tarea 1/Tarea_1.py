@@ -77,6 +77,9 @@ modelo.p_1 = pyo.Param(initialize=p_1)
 p_2 = generar_normal(11500,0.05*11500)
 modelo.p_2 = pyo.Param(initialize=p_2)
 
+Capacidad = [p_1,p_2]
+modelo.Capacidad_k = pyo.Param(modelo.K, initialize=lambda m, i: Capacidad[i-1])
+
 alfa = generar_normal(0.1,0.15*0.1,es_entero=False)
 modelo.alfa = pyo.Param(initialize=alfa)
 
@@ -139,14 +142,33 @@ modelo.C_lost = pyo.Param(modelo.T, initialize=lambda m, t: C_lost_vp[t-1])
 modelo.pprint()
 #Variables
 
-modelo.x_t = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
-modelo.l_t = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
-modelo.m_kt = pyo.Var(modelo.K,modelo.T, domain=pyo.NonNegativeIntegers)
-modelo.Y_kt = pyo.Var(modelo.K,modelo.T, domain=pyo.NonNegativeIntegers)
-modelo.h_t = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
-modelo.f_k = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
-modelo.W_t = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
-modelo.n_t = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
-modelo.P_t = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
+modelo.x = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
+modelo.l = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
+modelo.m = pyo.Var(modelo.K,modelo.T, domain=pyo.NonNegativeIntegers)
+modelo.Y = pyo.Var(modelo.K,modelo.T, domain=pyo.NonNegativeIntegers)
+modelo.h = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
+modelo.f = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
+modelo.W = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
+modelo.n = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
+modelo.P_a = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
+
+for k in modelo.K:
+    modelo.Y[k,1].fix(modelo.Y0[k])
 
 #A partir de aca abajo hago modelos, arriba pura variable e.e
+
+#como que tengo que definirlo asi
+def demanda(m, t): #solo deja 
+    return m.x[t] + m.l[t] == m.d[t]
+
+modelo.demanda = pyo.Constraint(modelo.T, rule=demanda)
+
+def capacidad_maquinas(m, t):
+    return m.x[t] <= sum(m.Y[k,t]*m.Capacidad_k[k] for k in m.K)
+
+modelo.capacidad_maquinas = pyo.Constraint(modelo.T, rule=capacidad_maquinas)
+
+def capacidad_mano_de_obra(m,t):
+    return m.alfa*m.x[t] <= m.H*m.W[t]
+
+modelo.capacidad_mano_de_obra = pyo.Constraint(modelo.T,rule=capacidad_mano_de_obra)
