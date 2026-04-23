@@ -220,4 +220,37 @@ def Funcion_Obj_Ini(mod):
 
 modelo.Funcion_Obj_Ini = pyo.Objective(rule=Funcion_Obj_Ini,sense=pyo.minimize)
 
-modelo.pprint()
+
+#Te explico Richard, este es el solver que tanto nos piden, si te fijas
+#los resultados tienen el uso de modelo incorporado; a lo que quiero llegar 
+#es que, si queremos hacer las variantes necesitamos hacer otro modelo, 
+#nombrarlo como "modelo_variante_b", cosas de ese estilo
+
+solver = pyo.SolverFactory('glpk')
+resultados = solver.solve(modelo, tee=True)
+
+print(resultados)
+print("\nProducción:")
+for t in modelo.T:
+    print(f"x[{t}] =", pyo.value(modelo.x[t]))
+
+print("\nOperarios:")
+for t in modelo.T:
+    print(f"W[{t}] =", pyo.value(modelo.W[t]))
+
+print("\nMáquinas:")
+for p in modelo.P:
+    for k in modelo.K:
+        for t in modelo.T:
+            print(f"Y[{p},{k},{t}] =", pyo.value(modelo.Y[p,k,t]))
+
+print("\nPlantas activas:")
+for t in modelo.T:
+    print(f"P_a[{t}] =", pyo.value(modelo.P_a[t]))
+
+print("\nDemanda no satisfecha:")
+for t in modelo.T:
+    print(f"l[{t}] =", pyo.value(modelo.l[t]))
+
+print("\nCosto total:")
+print(pyo.value(modelo.Funcion_Obj_Ini))
