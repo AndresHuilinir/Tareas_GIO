@@ -103,7 +103,7 @@ V_max = 0.1
 modelo.V_max = pyo.Param(initialize=V_max)
 
 Oc_max = 0.3
-modelo.O_max = pyo.Param(initialize=Oc_max)
+modelo.Oc_max = pyo.Param(initialize=Oc_max)
 
 C_m11 = generar_normal(18000000,18000000*0.05) #tipo maquina/tiempo
 C_m21 = generar_normal(32000000,32000000*0.05) #tipo maquina/tiempo
@@ -149,8 +149,10 @@ modelo.P_a = pyo.Var(modelo.T, domain=pyo.PositiveIntegers)
 
 modelo.W[1].fix(M_0)
 modelo.P_a[1].fix(p)
-for k in modelo.K:
-    modelo.Y[k,1].fix(modelo.Y0[k])
+
+for p in modelo.P:
+    for k in modelo.K:
+        modelo.Y[p,k,1].fix(modelo.Y0[k])
 
 
 #A partir de aca abajo hago modelos, arriba pura variable e.e
@@ -162,7 +164,7 @@ def demanda(m, t): #solo deja
 modelo.demanda = pyo.Constraint(modelo.T, rule=demanda)
 
 def capacidad_maquinas(m, t):
-    return m.x[t] <= sum(m.Y[k,t]*m.Capacidad_k[k] for k in m.K)
+    return m.x[t] <= sum(m.Y[p,k,t]*m.Capacidad_k[k] for p in m.P for k in m.K)
 
 modelo.capacidad_maquinas = pyo.Constraint(modelo.T, rule=capacidad_maquinas)
 
@@ -171,12 +173,12 @@ def capacidad_mano_de_obra(m,t):
 
 modelo.capacidad_mano_de_obra = pyo.Constraint(modelo.T,rule=capacidad_mano_de_obra)
 
-def acumulacion_maquinas(mod, t, k):
+def acumulacion_maquinas(mod, p, k, t):
     if t == 1:
         return pyo.Constraint.Skip
-    return mod.Y[k,t] == mod.Y[k,t-1] + mod.m[k,t-1]
+    return mod.Y[p,k,t] == mod.Y[p,k,t-1] + mod.m[k,t-1]
 
-modelo.acumulacion_maquinas = pyo.Constraint(modelo.T, modelo.K, rule=acumulacion_maquinas)
+modelo.acumulacion_maquinas = pyo.Constraint(modelo.P,modelo.K,modelo.T,rule=acumulacion_maquinas)
 
 def balance_operarios(m, t):
     if t == 1:
@@ -193,7 +195,7 @@ def plantas_activas(m,t):
 modelo.plantas_activas = pyo.Constraint(modelo.T, rule=plantas_activas)
 
 def restriccion_espacio(m, t):
-    return sum(m.S_yk[k]*m.Y[k,t] for k in m.K) + m.S_m*m.W[t] <= m.u*sum(m.S_p[p] for p in m.P)*m.P_a[t]
+    return sum(m.S_yk[k]*m.Y[p,k,t] for p in m.P for k in m.K) + m.S_m*m.W[t] <= m.u*sum(m.S_p[p] for p in m.P)*m.P_a[t]
 
 modelo.restriccion_espacio = pyo.Constraint(modelo.T, rule=restriccion_espacio)
 
@@ -203,7 +205,7 @@ def nivel_servicio(m,t):
 modelo.nivel_servicio = pyo.Constraint(modelo.T, rule=nivel_servicio)
 
 def sobrecapacidad_prod_maquinas(m,t):
-    return sum(m.Capacidad_k[k]*m.Y[k,t] for k in m.K) <= (1+m.Oc_max)*m.d[t]
+    return sum(m.Capacidad_k[k]*m.Y[p,k,t] for p in m.P for k in m.K) <= (1+m.Oc_max)*m.d[t]
 
 modelo.sobrecapacidad_prod_maquinas = pyo.Constraint(modelo.T, rule=sobrecapacidad_prod_maquinas)
 
