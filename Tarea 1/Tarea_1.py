@@ -214,4 +214,10 @@ def sobrecapacidad_prod_mano_obra(m,t):
 
 modelo.sobrecapacidad_prod_mano_obra = pyo.Constraint(modelo.T, rule=sobrecapacidad_prod_mano_obra)
 
+def Funcion_Obj_Ini(mod):
+    return sum(sum(mod.C_m[k,t]*mod.m[k,t] for k in mod.K) + mod.C_I[t]*mod.n[t] + mod.C_hire[t]*mod.h[t] + mod.C_fire[t]*mod.f[t]
+               + mod.C_sal[t]*mod.W[t] + mod.C_r[t]*mod.P_a[t] + mod.C_p[t]*mod.x[t] + mod.C_lost[t]*mod.l[t] for t in mod.T)
+
+modelo.Funcion_Obj_Ini = pyo.Objective(rule=Funcion_Obj_Ini,sense=pyo.minimize)
+
 modelo.pprint()
