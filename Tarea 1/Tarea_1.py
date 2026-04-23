@@ -25,7 +25,6 @@ def generar_uniforme(a, b, es_entero=False):
 
 InfProm = generar_normal(0.04,0.002*0.002,0.03,False, 0.05)
 R = generar_normal(0.10,0.005*0.005,0.09,False, 0.11)
-
 pi_min = (1+InfProm)**0.25 -1
 r = (1+R)**0.25 -1
 
@@ -44,7 +43,7 @@ def valor_presente(Variable_contexto):
 #conjuntos
 T= 24
 modelo.T = pyo.RangeSet(1, T)
-p = 3 
+p = 1
 modelo.P = pyo.RangeSet(1, p)
 k = 2
 modelo.K = pyo.RangeSet(1, k)
@@ -148,12 +147,16 @@ modelo.m = pyo.Var(modelo.K,modelo.T, domain=pyo.NonNegativeIntegers)
 modelo.Y = pyo.Var(modelo.K,modelo.T, domain=pyo.NonNegativeIntegers)
 modelo.h = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
 modelo.f = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
-modelo.W = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
+modelo.W = pyo.Var(modelo.T, domain=pyo.PositiveIntegers)
+modelo.i = pyo.Var(modelo.M,domain=pyo.Binary)
 modelo.n = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
-modelo.P_a = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
+modelo.P_a = pyo.Var(modelo.T, domain=pyo.PositiveIntegers)
 
+modelo.W[1].fix(M_0)
+modelo.P_a[1].fix(p)
 for k in modelo.K:
     modelo.Y[k,1].fix(modelo.Y0[k])
+
 
 #A partir de aca abajo hago modelos, arriba pura variable e.e
 
@@ -172,3 +175,33 @@ def capacidad_mano_de_obra(m,t):
     return m.alfa*m.x[t] <= m.H*m.W[t]
 
 modelo.capacidad_mano_de_obra = pyo.Constraint(modelo.T,rule=capacidad_mano_de_obra)
+
+def acumulacion_maquinas(mod, t, k):
+    if t == 1:
+        return pyo.Constraint.Skip
+    return mod.Y[k,t] == mod.Y[k,t-1] + mod.m[k,t-1]
+
+modelo.acumulacion_maquinas = pyo.Constraint(modelo.T, modelo.K, rule=acumulacion_maquinas)
+
+def balance_operarios(m, t):
+    if t == 1:
+        return pyo.Constraint.Skip
+    return m.W[t] == m.W[t-1] + m.h[t] - m.f[t]
+
+modelo.balance_operarios = pyo.Constraint(modelo.T, rule=balance_operarios)
+
+def plantas_activas(m,t):
+    if t == 1:
+        return pyo.Constraint.Skip
+    return m.P_a[t] == m.P_a[t-1] + m.n[t]
+
+modelo.plantas_activas = pyo.Constraint(modelo.T, rule=plantas_activas)
+
+'''
+En mantenimiento, por su paciencia gracias
+def restriccion_esp_fis(mod,m,p,k,t):
+    if t == 1:
+        return pyo.Constraint.Skip
+    return sum(mod.S_yk[k]*mod.Y[k,t] for k in mod.K) + mod.S_m[m]*mod.i[m]
+'''
+
