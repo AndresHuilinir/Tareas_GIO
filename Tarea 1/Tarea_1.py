@@ -47,10 +47,9 @@ p = 1
 modelo.P = pyo.RangeSet(1, p)
 k = 2
 modelo.K = pyo.RangeSet(1, k)
-M_0 = 8
-modelo.M = pyo.RangeSet(1, M_0)
 
 #parametros
+M_0 = 8
 Y_01 = 2 #Maquina tipo 1 inicial
 Y_02 = 1 #Maquina tipo 2 inicial
 Y0 = [Y_01, Y_02]
@@ -97,11 +96,8 @@ for k_ in range(k):
 
 modelo.S_yk = pyo.Param(modelo.K, initialize=lambda m, i: S_yk[i-1])
 
-S_m = [] #superficie por operario
-for m_ in range(M_0):
-    S_m.append(generar_normal(6,6*0.05,es_entero=False))
-
-modelo.S_m = pyo.Param(modelo.M, initialize=lambda m, i: S_m[i-1])
+S_m = generar_normal(6,6*0.05,es_entero=False)
+modelo.S_m = pyo.Param(initialize=S_m)
 
 V_max = 0.1
 modelo.V_max = pyo.Param(initialize=V_max)
@@ -138,17 +134,16 @@ modelo.C_I = pyo.Param(modelo.T, initialize=lambda m, t: C_I_vp[t-1]) #
 modelo.C_p = pyo.Param(modelo.T, initialize=lambda m, t: C_p_vp[t-1]) #
 modelo.C_lost = pyo.Param(modelo.T, initialize=lambda m, t: C_lost_vp[t-1])
 
-modelo.pprint()
+
 #Variables
 
 modelo.x = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
 modelo.l = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
 modelo.m = pyo.Var(modelo.K,modelo.T, domain=pyo.NonNegativeIntegers)
-modelo.Y = pyo.Var(modelo.K,modelo.T, domain=pyo.NonNegativeIntegers)
+modelo.Y = pyo.Var(modelo.P, modelo.K, modelo.T, domain=pyo.NonNegativeIntegers)
 modelo.h = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
 modelo.f = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
 modelo.W = pyo.Var(modelo.T, domain=pyo.PositiveIntegers)
-modelo.i = pyo.Var(modelo.M,domain=pyo.Binary)
 modelo.n = pyo.Var(modelo.T, domain=pyo.NonNegativeIntegers)
 modelo.P_a = pyo.Var(modelo.T, domain=pyo.PositiveIntegers)
 
@@ -197,11 +192,24 @@ def plantas_activas(m,t):
 
 modelo.plantas_activas = pyo.Constraint(modelo.T, rule=plantas_activas)
 
-'''
-En mantenimiento, por su paciencia gracias
-def restriccion_esp_fis(mod,m,p,k,t):
-    if t == 1:
-        return pyo.Constraint.Skip
-    return sum(mod.S_yk[k]*mod.Y[k,t] for k in mod.K) + mod.S_m[m]*mod.i[m]
-'''
+def restriccion_espacio(m, t):
+    return sum(m.S_yk[k]*m.Y[k,t] for k in m.K) + m.S_m*m.W[t] <= m.u*sum(m.S_p[p] for p in m.P)*m.P_a[t]
 
+modelo.restriccion_espacio = pyo.Constraint(modelo.T, rule=restriccion_espacio)
+
+def nivel_servicio(m,t):
+    return m.l[t] <= m.V_max*m.d[t]
+
+modelo.nivel_servicio = pyo.Constraint(modelo.T, rule=nivel_servicio)
+
+def sobrecapacidad_prod_maquinas(m,t):
+    return sum(m.Capacidad_k[k]*m.Y[k,t] for k in m.K) <= (1+m.Oc_max)*m.d[t]
+
+modelo.sobrecapacidad_prod_maquinas = pyo.Constraint(modelo.T, rule=sobrecapacidad_prod_maquinas)
+
+def sobrecapacidad_prod_mano_obra(m,t):
+    return m.H*m.W[t]/m.alfa <= (1+m.Oc_max)*m.d[t]
+
+modelo.sobrecapacidad_prod_mano_obra = pyo.Constraint(modelo.T, rule=sobrecapacidad_prod_mano_obra)
+
+modelo.pprint()
