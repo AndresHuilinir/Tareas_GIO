@@ -101,7 +101,7 @@ def nivel_servicio(m, t):
     return m.l[t] <= m.V_max*m.d[t]
 
 def sobrecapacidad_prod_maquinas(m,t):
-    return sum(m.Capacidad_k[k]*m.Y[k, t] for k in m.K) <= (1 + m.O_max)*m.d[t]
+    return sum(m.Capacidad_k[k]*m.Y[k, t] for k in m.K) <= (1+m.O_max)*m.d[t]
 
 def sobrecapacidad_prod_mano_obra(m,t):
     return m.H*m.W[t]/m.alfa <= (1+m.O_max)*m.d[t]
@@ -111,10 +111,8 @@ def funcion_objetivo_original(m):
     + m.C_sal[t]*m.W[t]+ m.C_r[t]*m.P_t[t]+ m.C_p[t]*m.x[t]+ m.C_lost[t]*m.l[t] for t in m.T)
 
 def construir_modelo(
-    restricciones_extra=None, #[nombre,indices,rule]
-    variables_extra=None, #[nombre,indices,dominio]
-    funcion_objetivo=None, # por defecto usa la de antes de las variables
-    params_extra=None, # dict{nombre:valor}
+    restricciones_extra=None,variables_extra=None,funcion_objetivo=None, params_extra=None, 
+    omitir_restricciones=None, #para reemplazar la restriccion de demanda
 ):
     mod = pyo.ConcreteModel()
     mod.T = pyo.RangeSet(1,T)
@@ -161,7 +159,9 @@ def construir_modelo(
             else:
                 mod.add_component(nombre,pyo.Var(indices,domain=domain))
 
-    mod.demanda = pyo.Constraint(mod.T,rule=demanda)
+    omitir = omitir_restricciones or []
+    if "demanda" not in omitir:
+        mod.demanda = pyo.Constraint(mod.T, rule=demanda)
     mod.capacidad_maquinas = pyo.Constraint(mod.T,rule=capacidad_maquinas)
     mod.capacidad_mano_de_obra = pyo.Constraint(mod.T,rule=capacidad_mano_de_obra)
     mod.acumulacion_maquinas = pyo.Constraint(mod.K, mod.T,rule=acumulacion_maquinas)
@@ -220,11 +220,12 @@ resolver(modelo_base, nombre="Modelo Base")
 
 def demanda_pendiente(mod,t):
     if t==1:
-        return mod.l[t] == d_1 +mod.d[t]-mod.x[t]
-    return mod.l[t] == mod.d[t-1] +mod.d[t]-mod.x[t]
+        return mod.x[t]+mod.l[t]==mod.d[t]
+    return mod.x[t]+mod.l[t]==mod.d[t]+mod.l[t-1]
 
 modelo_a = construir_modelo(
-    restricciones_extra=[("demanda_pendiente",pyo.RangeSet(1, T), demanda_pendiente)]
+    restricciones_extra=[("demanda_pendiente",pyo.RangeSet(1,T),demanda_pendiente)],
+    omitir_restricciones=["demanda"] #con esto deberia eliminarse
 )
 resolver(modelo_a, "Variante a")
 '''
