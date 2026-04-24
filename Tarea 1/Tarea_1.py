@@ -74,7 +74,7 @@ def demanda(m,t):
     return m.x[t]+m.l[t] == m.d[t]
 
 def capacidad_maquinas(m,t):
-    return m.x[t] <= sum(m.Y[k, t]*m.Capacidad_k[k] for k in m.K)
+    return m.x[t] <= sum(m.Y[k,t]*m.Capacidad_k[k] for k in m.K)
 
 def capacidad_mano_de_obra(m,t):
     return m.alfa*m.x[t] <= m.H*m.W[t]
@@ -107,7 +107,7 @@ def sobrecapacidad_prod_mano_obra(m,t):
     return m.H*m.W[t]/m.alfa <= (1+m.O_max)*m.d[t]
 
 def funcion_objetivo_original(m):
-    return sum(sum(m.C_m[k, t] * m.m[k, t] for k in m.K)+ m.C_I[t]*m.n[t]+ m.C_hire[t]*m.h[t]+ m.C_fire[t]*m.f[t]
+    return sum(sum(m.C_m[k,t]*m.m[k,t] for k in m.K)+ m.C_I[t]*m.n[t]+ m.C_hire[t]*m.h[t]+ m.C_fire[t]*m.f[t]
     + m.C_sal[t]*m.W[t]+ m.C_r[t]*m.P_t[t]+ m.C_p[t]*m.x[t]+ m.C_lost[t]*m.l[t] for t in m.T)
 
 def construir_modelo(
@@ -217,10 +217,18 @@ modelo_base = construir_modelo()
 resolver(modelo_base, nombre="Modelo Base")
 
 # Richard aca te dejo las plantillas de los codigos, como usarlos mas menos
+
+def demanda_pendiente(mod,t):
+    if t==1:
+        return mod.l[t] == d_1 +mod.d[t]-mod.x[t]
+    return mod.l[t] == mod.d[t-1] +mod.d[t]-mod.x[t]
+
+modelo_a = construir_modelo(
+    restricciones_extra=[("demanda_pendiente",pyo.RangeSet(1, T), demanda_pendiente)]
+)
+resolver(modelo_a, "Variante a")
 '''
 # Variante a
-def r_nueva(m, t):
-    return ...  # tu restricción
 
 modelo_a = construir_modelo(
     restricciones_extra=[("r_nueva", m.T, r_nueva)]  # usa m.T del modelo nuevo
