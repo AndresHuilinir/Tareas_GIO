@@ -106,7 +106,7 @@ def sobrecapacidad_prod_maquinas(m,t):
 def sobrecapacidad_prod_mano_obra(m,t):
     return m.H*m.W[t]/m.alfa <= (1+m.O_max)*m.d[t]
 
-def funcion_objetivo_base(m):
+def funcion_objetivo_original(m):
     return sum(sum(m.C_m[k, t] * m.m[k, t] for k in m.K)+ m.C_I[t]*m.n[t]+ m.C_hire[t]*m.h[t]+ m.C_fire[t]*m.f[t]
     + m.C_sal[t]*m.W[t]+ m.C_r[t]*m.P_t[t]+ m.C_p[t]*m.x[t]+ m.C_lost[t]*m.l[t] for t in m.T)
 
@@ -116,81 +116,75 @@ def construir_modelo(
     funcion_objetivo=None, # por defecto usa la de antes de las variables
     params_extra=None, # dict{nombre:valor}
 ):
-    m = pyo.ConcreteModel()
-    m.T = pyo.RangeSet(1,T)
-    m.K = pyo.RangeSet(1,2)
-    m.Y0 = pyo.Param(m.K,initialize=lambda mo,k:Y0[k-1])
-    m.H = pyo.Param(initialize=480)
-    m.d = pyo.Param(m.T,initialize=lambda mo, t: d_t[t-1])
-    m.Capacidad_k = pyo.Param(m.K,     initialize=lambda mo, i: Capacidad[i - 1])
-    m.alfa        = pyo.Param(initialize=alfa)
-    m.S_p         = pyo.Param(initialize=S_p)
-    m.u           = pyo.Param(initialize=0.7)
-    m.S_yk        = pyo.Param(m.K,     initialize=lambda mo, i: S_yk[i - 1])
-    m.S_m         = pyo.Param(initialize=S_m)
-    m.V_max       = pyo.Param(initialize=0.1)
-    m.O_max       = pyo.Param(initialize=0.3)
-    m.C_m         = pyo.Param(m.K, m.T, initialize=lambda mo, k, t: C_m1_vp[t-1] if k == 1 else C_m2_vp[t-1])
-    m.C_hire      = pyo.Param(m.T,     initialize=lambda mo, t: C_hire_vp[t - 1])
-    m.C_fire      = pyo.Param(m.T,     initialize=lambda mo, t: C_fire_vp[t - 1])
-    m.C_sal       = pyo.Param(m.T,     initialize=lambda mo, t: C_sal_vp[t - 1])
-    m.C_r         = pyo.Param(m.T,     initialize=lambda mo, t: C_r_vp[t - 1])
-    m.C_I         = pyo.Param(m.T,     initialize=lambda mo, t: C_I_vp[t - 1])
-    m.C_p         = pyo.Param(m.T,     initialize=lambda mo, t: C_p_vp[t - 1])
-    m.C_lost      = pyo.Param(m.T,     initialize=lambda mo, t: C_lost_vp[t - 1])
-
+    mod = pyo.ConcreteModel()
+    mod.T = pyo.RangeSet(1,T)
+    mod.K = pyo.RangeSet(1,2)
+    mod.Y0 = pyo.Param(mod.K,initialize=lambda mo,k:Y0[k-1])
+    mod.H = pyo.Param(initialize=480)
+    mod.d = pyo.Param(mod.T,initialize=lambda mo,t:d_t[t-1])
+    mod.Capacidad_k = pyo.Param(mod.K,initialize=lambda mo, i:Capacidad[i-1])
+    mod.alfa = pyo.Param(initialize=alfa)
+    mod.S_p = pyo.Param(initialize=S_p)
+    mod.u = pyo.Param(initialize=0.7)
+    mod.S_yk = pyo.Param(mod.K,initialize=lambda mo, i:S_yk[i-1])
+    mod.S_m = pyo.Param(initialize=S_m)
+    mod.V_max = pyo.Param(initialize=0.1)
+    mod.O_max = pyo.Param(initialize=0.3)
+    mod.C_m = pyo.Param(mod.K, mod.T, initialize=lambda mo,k,t:C_m1_vp[t-1] if k == 1 else C_m2_vp[t-1])
+    mod.C_hire = pyo.Param(mod.T,initialize=lambda mo,t:C_hire_vp[t-1])
+    mod.C_fire = pyo.Param(mod.T,initialize=lambda mo,t:C_fire_vp[t-1])
+    mod.C_sal = pyo.Param(mod.T,initialize=lambda mo,t:C_sal_vp[t-1])
+    mod.C_r = pyo.Param(mod.T,initialize=lambda mo,t:C_r_vp[t-1])
+    mod.C_I = pyo.Param(mod.T,initialize=lambda mo,t:C_I_vp[t-1])
+    mod.C_p = pyo.Param(mod.T,initialize=lambda mo,t:C_p_vp[t-1])
+    mod.C_lost = pyo.Param(mod.T,initialize=lambda mo,t:C_lost_vp[t-1])
     if params_extra:
         for nombre, valor in params_extra.items():
-            m.add_component(nombre, pyo.Param(initialize=valor))
+            mod.add_component(nombre, pyo.Param(initialize=valor))
 
-    # Variables base
-    m.x   = pyo.Var(m.T,        domain=pyo.NonNegativeReals)
-    m.l   = pyo.Var(m.T,        domain=pyo.NonNegativeReals)
-    m.m   = pyo.Var(m.K, m.T,   domain=pyo.NonNegativeIntegers)
-    m.Y   = pyo.Var(m.K, m.T,   domain=pyo.NonNegativeIntegers)
-    m.h   = pyo.Var(m.T,        domain=pyo.NonNegativeIntegers)
-    m.f   = pyo.Var(m.T,        domain=pyo.NonNegativeIntegers)
-    m.W   = pyo.Var(m.T,        domain=pyo.PositiveIntegers)
-    m.n   = pyo.Var(m.T,        domain=pyo.NonNegativeIntegers)
-    m.P_t = pyo.Var(m.T,        domain=pyo.PositiveIntegers)
+    mod.x = pyo.Var(mod.T,domain=pyo.NonNegativeReals)
+    mod.l = pyo.Var(mod.T,domain=pyo.NonNegativeReals)
+    mod.m = pyo.Var(mod.K,mod.T,domain=pyo.NonNegativeIntegers)
+    mod.Y = pyo.Var(mod.K,mod.T,domain=pyo.NonNegativeIntegers)
+    mod.h = pyo.Var(mod.T,domain=pyo.NonNegativeIntegers)
+    mod.f = pyo.Var(mod.T,domain=pyo.NonNegativeIntegers)
+    mod.W = pyo.Var(mod.T,domain=pyo.PositiveIntegers)
+    mod.n = pyo.Var(mod.T,domain=pyo.NonNegativeIntegers)
+    mod.P_t = pyo.Var(mod.T,domain=pyo.PositiveIntegers)
 
     if variables_extra:
         for nombre, indices, domain in variables_extra:
             if indices is None:
-                m.add_component(nombre, pyo.Var(domain=domain))
-            elif isinstance(indices, tuple):
-                m.add_component(nombre, pyo.Var(*indices, domain=domain))
+                mod.add_component(nombre,pyo.Var(domain=domain))
+            elif isinstance(indices,tuple):
+                mod.add_component(nombre, pyo.Var(*indices,domain=domain))
             else:
-                m.add_component(nombre, pyo.Var(indices, domain=domain))
+                mod.add_component(nombre,pyo.Var(indices,domain=domain))
 
-    # Restricciones base
-    m.demanda                    = pyo.Constraint(m.T,       rule=demanda)
-    m.capacidad_maquinas         = pyo.Constraint(m.T,       rule=capacidad_maquinas)
-    m.capacidad_mano_de_obra     = pyo.Constraint(m.T,       rule=capacidad_mano_de_obra)
-    m.acumulacion_maquinas       = pyo.Constraint(m.K, m.T,  rule=acumulacion_maquinas)
-    m.balance_operarios          = pyo.Constraint(m.T,       rule=balance_operarios)
-    m.plantas_activas            = pyo.Constraint(m.T,       rule=plantas_activas)
-    m.restriccion_espacio        = pyo.Constraint(m.T,       rule=restriccion_espacio)
-    m.nivel_servicio             = pyo.Constraint(m.T,       rule=nivel_servicio)
-    m.sobrecapacidad_prod_maquinas   = pyo.Constraint(m.T,   rule=sobrecapacidad_prod_maquinas)
-    m.sobrecapacidad_prod_mano_obra  = pyo.Constraint(m.T,   rule=sobrecapacidad_prod_mano_obra)
+    mod.demanda = pyo.Constraint(mod.T,rule=demanda)
+    mod.capacidad_maquinas = pyo.Constraint(mod.T,rule=capacidad_maquinas)
+    mod.capacidad_mano_de_obra = pyo.Constraint(mod.T,rule=capacidad_mano_de_obra)
+    mod.acumulacion_maquinas = pyo.Constraint(mod.K, mod.T,rule=acumulacion_maquinas)
+    mod.balance_operarios = pyo.Constraint(mod.T,rule=balance_operarios)
+    mod.plantas_activas = pyo.Constraint(mod.T,rule=plantas_activas)
+    mod.restriccion_espacio = pyo.Constraint(mod.T,rule=restriccion_espacio)
+    mod.nivel_servicio = pyo.Constraint(mod.T,rule=nivel_servicio)
+    mod.sobrecapacidad_prod_maquinas = pyo.Constraint(mod.T,rule=sobrecapacidad_prod_maquinas)
+    mod.sobrecapacidad_prod_mano_obra = pyo.Constraint(mod.T,rule=sobrecapacidad_prod_mano_obra)
 
     if restricciones_extra:
-        for nombre, indices, rule in restricciones_extra:
+        for nombre,indices,rule in restricciones_extra:
             if indices is None:
-                m.add_component(nombre, pyo.Constraint(rule=rule))
-            elif isinstance(indices, tuple):
-                m.add_component(nombre, pyo.Constraint(*indices, rule=rule))
+                mod.add_component(nombre,pyo.Constraint(rule=rule))
+            elif isinstance(indices,tuple):
+                mod.add_component(nombre,pyo.Constraint(*indices,rule=rule))
             else:
-                m.add_component(nombre, pyo.Constraint(indices, rule=rule))
+                mod.add_component(nombre,pyo.Constraint(indices,rule=rule))
 
-    obj_rule = funcion_objetivo if funcion_objetivo is not None else funcion_objetivo_base
-    m.objetivo = pyo.Objective(rule=obj_rule, sense=pyo.minimize)
-    return m
+    obj_rule = funcion_objetivo if funcion_objetivo is not None else funcion_objetivo_original
+    mod.objetivo = pyo.Objective(rule=obj_rule, sense=pyo.minimize)
+    return mod
 
-# ══════════════════════════════════════════════════════════════════════
-#  RESOLVER Y MOSTRAR RESULTADOS
-# ══════════════════════════════════════════════════════════════════════
 cbc_path = shutil.which("cbc")
 if cbc_path is None:
     raise RuntimeError("CBC no está instalado o no está en el PATH")
@@ -198,7 +192,7 @@ solver = pyo.SolverFactory('cbc', executable=cbc_path)
 
 def resolver(modelo_v, nombre=""):
     resultado = solver.solve(modelo_v)
-    if str(resultado.solver.termination_condition) != "optimal":
+    if str(resultado.solver.termination_condition)!="optimal":
         print(f"[{nombre}] Modelo inviable")
         return False
     print(f"\n{'─'*60}")
@@ -209,18 +203,61 @@ def resolver(modelo_v, nombre=""):
               f"{'h_t':>5} {'f_t':>5} {'P_t':>5} {'n_t':>5} "
               f"{'m1_t':>6} {'m2_t':>6} {'Y1_t':>6} {'Y2_t':>6}")
     print(header)
-    print("-" * len(header))
+    print("-"*len(header))
     for t in modelo_v.T:
         print(f"{t:>3}  {pyo.value(modelo_v.d[t]):>8.0f} {pyo.value(modelo_v.x[t]):>8.0f} "
               f"{pyo.value(modelo_v.l[t]):>8.0f} {pyo.value(modelo_v.W[t]):>5.0f} "
               f"{pyo.value(modelo_v.h[t]):>5.0f} {pyo.value(modelo_v.f[t]):>5.0f} "
               f"{pyo.value(modelo_v.P_t[t]):>5.0f} {pyo.value(modelo_v.n[t]):>5.0f} "
-              f"{pyo.value(modelo_v.m[1, t]):>6.0f} {pyo.value(modelo_v.m[2, t]):>6.0f} "
-              f"{pyo.value(modelo_v.Y[1, t]):>6.0f} {pyo.value(modelo_v.Y[2, t]):>6.0f}")
+              f"{pyo.value(modelo_v.m[1,t]):>6.0f} {pyo.value(modelo_v.m[2,t]):>6.0f} "
+              f"{pyo.value(modelo_v.Y[1,t]):>6.0f} {pyo.value(modelo_v.Y[2,t]):>6.0f}")
     return True
 
-# ══════════════════════════════════════════════════════════════════════
-#  EJECUCIÓN — MODELO BASE
-# ══════════════════════════════════════════════════════════════════════
 modelo_base = construir_modelo()
 resolver(modelo_base, nombre="Modelo Base")
+
+# Richard aca te dejo las plantillas de los codigos, como usarlos mas menos
+'''
+# Variante a
+def r_nueva(m, t):
+    return ...  # tu restricción
+
+modelo_a = construir_modelo(
+    restricciones_extra=[("r_nueva", m.T, r_nueva)]  # usa m.T del modelo nuevo
+)
+resolver(modelo_a, "Variante a")
+
+
+# ── Variante b: param nuevo + FO distinta + restricciones ────────────
+def fo_b(m):
+    return sum(...) # tu nueva FO que puede usar m.C_nuevo
+
+def r_b1(m, t):
+    return ...
+
+modelo_b = construir_modelo(
+    restricciones_extra=[
+        ("r_b1", modelo_b.T, r_b1),   # ← ver nota abajo
+    ],
+    params_extra={"C_nuevo": 99999},
+    fo=fo_b,
+)
+resolver(modelo_b, "Variante b")
+
+
+# ── Variante c: variable nueva + todo lo anterior ────────────────────
+def fo_c(m):
+    return sum(... + m.s[t] * m.C_nuevo ...)
+
+def r_c1(m, t):
+    return m.s[t] <= ...
+
+modelo_c = construir_modelo(
+    variables_extra=[("s", None, pyo.NonNegativeReals)],  # escalar
+    # o indexada: ("s", modelo_c.T, pyo.NonNegativeReals)  ← ver nota
+    restricciones_extra=[("r_c1", None, r_c1)],
+    params_extra={"C_nuevo": 99999, "otro": 5},
+    fo=fo_c,
+)
+resolver(modelo_c, "Variante c")
+'''
