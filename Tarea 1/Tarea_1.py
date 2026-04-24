@@ -24,16 +24,15 @@ def generar_uniforme(a, b, es_entero=False):
         valor = max(0, round(valor))
     return valor
 
-
-InfProm = generar_normal(0.04, 0.002, 0.03, False, 0.05)
-R = generar_normal(0.10, 0.005, 0.09, False, 0.11)
+InfProm = generar_normal(0.04,0.002,0.03,False,0.05)
+R = generar_normal(0.10,0.005,0.09,False,0.11)
 pi_min = (1+InfProm)**0.25-1
 r = (1+R)**0.25-1
 
 def valor_presente(Variable_contexto):
     lista = [Variable_contexto]
-    for t in range(2, T + 1):
-        lista.append(Variable_contexto * ((1 + pi_min) / (1 + r)) ** (t - 1))
+    for t in range(2,T+1):
+        lista.append(Variable_contexto*((1+pi_min)/(1+r))**(t-1))
     return lista
 
 # Conjuntos
@@ -126,7 +125,7 @@ modelo.h   = pyo.Var(modelo.T,           domain=pyo.NonNegativeIntegers)
 modelo.f   = pyo.Var(modelo.T,           domain=pyo.NonNegativeIntegers)
 modelo.W   = pyo.Var(modelo.T,           domain=pyo.PositiveIntegers)
 modelo.n   = pyo.Var(modelo.T,           domain=pyo.NonNegativeIntegers)
-modelo.P_a = pyo.Var(modelo.T,           domain=pyo.PositiveIntegers)
+modelo.P_t = pyo.Var(modelo.T,           domain=pyo.PositiveIntegers)
 
 def demanda(m, t):
     return m.x[t] + m.l[t] == m.d[t]
@@ -159,13 +158,13 @@ modelo.balance_operarios = pyo.Constraint(modelo.T, rule=balance_operarios)
 
 def plantas_activas(m,t):
     if (t==1):
-        return m.P_a[t] == P_0 + m.n[t]
-    return m.P_a[t] == m.P_a[t-1] + m.n[t]
+        return m.P_t[t] == P_0 + m.n[t]
+    return m.P_t[t] == m.P_t[t-1] + m.n[t]
 
 modelo.plantas_activas = pyo.Constraint(modelo.T, rule=plantas_activas)
 
 def restriccion_espacio(m, t):
-    return (sum(m.S_yk[k]*m.Y[k,t] for k in m.K) + m.S_m*m.W[t] <= m.u*m.S_p*m.P_a[t])
+    return (sum(m.S_yk[k]*m.Y[k,t] for k in m.K) + m.S_m*m.W[t] <= m.u*m.S_p*m.P_t[t])
 
 modelo.restriccion_espacio = pyo.Constraint(modelo.T, rule=restriccion_espacio)
 
@@ -187,7 +186,7 @@ modelo.sobrecapacidad_prod_mano_obra = pyo.Constraint(modelo.T, rule=sobrecapaci
 def funcion_objetivo(m):
     return sum(
         sum(m.C_m[k,t]*m.m[k,t] for k in m.K) + m.C_I[t]* m.n[t]+ m.C_hire[t]*m.h[t]+ m.C_fire[t]*m.f[t]
-        +m.C_sal[t]*m.W[t]+ m.C_r[t]*m.P_a[t]+ m.C_p[t]*m.x[t]+ m.C_lost[t]*m.l[t]for t in m.T)
+        +m.C_sal[t]*m.W[t]+ m.C_r[t]*m.P_t[t]+ m.C_p[t]*m.x[t]+ m.C_lost[t]*m.l[t]for t in m.T)
 
 modelo.objetivo = pyo.Objective(rule=funcion_objetivo, sense=pyo.minimize)
 cbc_path = shutil.which("cbc")
@@ -202,14 +201,14 @@ if str(resultado.solver.termination_condition)!="optimal":
 
 print(f"Costo total VP: {pyo.value(modelo.objetivo):,.0f} CLP\n")
 
-print(f"{'t':>3} {'d_t':>8} {'x_t':>8} {'l_t':>6} {'W_t':>5}"
-      f"{'h_t':>5} {'f_t':>5} {'P_a':>4} {'n_t':>4}"
-      f"{'m1_t':>5} {'m2_t':>5} {'Y1_t':>5} {'Y2_t':>5}")
-print("-" * 80)
+print(f"{'t':>3} {'d_t':>8} {'x_t':>8}  {'l_t':>6}   {'W_t':>5}"
+      f" {'h_t':>5} {'f_t':>5}  {'P_t':>4}  {'n_t':>4}"
+      f"  {'m1_t':>5} {'m2_t':>5} {'Y1_t':>5} {'Y2_t':>5}")
+print("-" * 86)
 for t in modelo.T:
-    print(f"{t:>3} {pyo.value(modelo.d[t]):>8.0f}{pyo.value(modelo.x[t]):>8.0f}"
-          f"{pyo.value(modelo.l[t]):>6.0f}{pyo.value(modelo.W[t]):>5.0f}"
-          f"{pyo.value(modelo.h[t]):>5.0f}{pyo.value(modelo.f[t]):>5.0f}"
-          f"{pyo.value(modelo.P_a[t]):>4.0f}{pyo.value(modelo.n[t]):>4.0f}"
-          f"{pyo.value(modelo.m[1, t]):>5.0f}{pyo.value(modelo.m[2,t]):>5.0f}"
-          f"{pyo.value(modelo.Y[1, t]):>5.0f}{pyo.value(modelo.Y[2,t]):>5.0f}")
+    print(f"{t:>3}  {pyo.value(modelo.d[t]):>8.0f} {pyo.value(modelo.x[t]):>8.0f}"
+          f"  {pyo.value(modelo.l[t]):>6.0f} {pyo.value(modelo.W[t]):>5.0f}"
+          f" {pyo.value(modelo.h[t]):>5.0f} {pyo.value(modelo.f[t]):>5.0f}"
+          f"  {pyo.value(modelo.P_t[t]):>4.0f}  {pyo.value(modelo.n[t]):>4.0f}"
+          f"  {pyo.value(modelo.m[1,t]):>5.0f} {pyo.value(modelo.m[2,t]):>5.0f}"
+          f" {pyo.value(modelo.Y[1, t]):>5.0f} {pyo.value(modelo.Y[2,t]):>5.0f}")
