@@ -35,7 +35,7 @@ InfProm = generar_normal(0.04,0.002,0.03,False,0.05)
 R = generar_normal(0.10,0.005,0.09,False,0.11)
 pi_min = (1+InfProm)**0.25-1
 r = (1+R)**0.25-1
-d_1 = generar_normal(25000,0.05*25000,1)
+d_1 = generar_normal(25000,0.05*25000,1) #original:generar_normal(25000,0.05*25000,1)
 r_t = generar_uniforme(1.02,1.04)
 d_t = [d_1]
 for t in range(2,T+1):
@@ -50,15 +50,15 @@ S_p = generar_normal(100,0.05*100,es_entero=False)
 S_yk = [generar_normal(15,0.05 * 15,es_entero=False) for _ in range(2)]
 S_m = generar_normal(6,6*0.05, es_entero=False)
 
-C_m11 = generar_normal(18_000_000,18_000_000*0.05)
-C_m21 = generar_normal(32_000_000,32_000_000*0.05)
-C_hire1 = generar_normal(500_000,500_000*0.05)
-C_fire1 = generar_normal(1_800_000,1_800_000*0.05)
-C_sal1 = generar_normal(7_200_000,7_200_000*0.03)
-C_r1 = generar_normal(15_000_000,15_000_000*0.05)
-C_I1 = generar_normal(45_000_000,45_000_000*0.05)
-C_p1 = generar_normal(2_500,2_500*0.05)
-C_lost1 = generar_normal(12_000,12_000*0.05)
+C_m11 = generar_normal(18000000,18000000*0.05)
+C_m21 = generar_normal(32000000,32000000*0.05)
+C_hire1 = generar_normal(500000,500000*0.05)
+C_fire1 = generar_normal(1800000,1800000*0.05)
+C_sal1 = generar_normal(7200000,7200000*0.03)
+C_r1 = generar_normal(15000000,15000000*0.05)
+C_I1 = generar_normal(45000000,45000000*0.05)
+C_p1 = generar_normal(2500,2500*0.05)
+C_lost1 = generar_normal(12000,12_000*0.05)
 
 C_m1_vp = valor_presente(C_m11)
 C_m2_vp = valor_presente(C_m21)
@@ -111,7 +111,7 @@ def funcion_objetivo_original(m):
     + m.C_sal[t]*m.W[t]+ m.C_r[t]*m.P_t[t]+ m.C_p[t]*m.x[t]+ m.C_lost[t]*m.l[t] for t in m.T)
 
 def construir_modelo(
-    restricciones_extra=None,variables_extra=None,funcion_objetivo=None, params_extra=None, 
+    restricciones_extra=None,variables_extra=None,funcion_objetivo=None, parametros_extra=None, 
     omitir_restricciones=None, #para reemplazar la restriccion de demanda
 ):
     mod = pyo.ConcreteModel()
@@ -136,8 +136,8 @@ def construir_modelo(
     mod.C_I = pyo.Param(mod.T,initialize=lambda mo,t:C_I_vp[t-1])
     mod.C_p = pyo.Param(mod.T,initialize=lambda mo,t:C_p_vp[t-1])
     mod.C_lost = pyo.Param(mod.T,initialize=lambda mo,t:C_lost_vp[t-1])
-    if params_extra:
-        for nombre, valor in params_extra.items():
+    if parametros_extra:
+        for nombre, valor in parametros_extra.items():
             mod.add_component(nombre, pyo.Param(initialize=valor))
 
     mod.x = pyo.Var(mod.T,domain=pyo.NonNegativeReals)
@@ -199,24 +199,45 @@ def resolver(modelo_v, nombre=""):
     print(f"  {nombre}")
     print(f"  Costo total VP: {pyo.value(modelo_v.objetivo):,.0f} CLP")
     print(f"{'─'*60}")
-    header = (f"{'t':>3}  {'d_t':>8} {'x_t':>8} {'l_t':>8} {'W_t':>5} "
+    variables_base = {'x', 'l', 'm', 'Y', 'h', 'f', 'W', 'n', 'P_t'}
+    variables_nuevas = []
+
+    for var in modelo_v.component_objects(pyo.Var, active=True):
+        nombre_variable = var.local_name
+        if nombre_variable not in variables_base:
+            if 1 in var:
+                variables_nuevas.append(nombre_variable)
+
+    encabezado = (f"{'t':>3}  {'d_t':>8} {'x_t':>8} {'l_t':>8} {'W_t':>5} "
               f"{'h_t':>5} {'f_t':>5} {'P_t':>5} {'n_t':>5} "
               f"{'m1_t':>6} {'m2_t':>6} {'Y1_t':>6} {'Y2_t':>6}")
-    print(header)
-    print("-"*len(header))
+    
+    for v in variables_nuevas:
+        encabezado += f" {v + '_t':>8}"
+
+    print(encabezado)
+    print("-"*(len(encabezado)+3))
     for t in modelo_v.T:
-        print(f"{t:>3}  {pyo.value(modelo_v.d[t]):>8.0f} {pyo.value(modelo_v.x[t]):>8.0f} "
-              f"{pyo.value(modelo_v.l[t]):>8.0f} {pyo.value(modelo_v.W[t]):>5.0f} "
-              f"{pyo.value(modelo_v.h[t]):>5.0f} {pyo.value(modelo_v.f[t]):>5.0f} "
-              f"{pyo.value(modelo_v.P_t[t]):>5.0f} {pyo.value(modelo_v.n[t]):>5.0f} "
-              f"{pyo.value(modelo_v.m[1,t]):>6.0f} {pyo.value(modelo_v.m[2,t]):>6.0f} "
-              f"{pyo.value(modelo_v.Y[1,t]):>6.0f} {pyo.value(modelo_v.Y[2,t]):>6.0f}")
+        linea = (f"{t:>3}  {pyo.value(modelo_v.d[t]):>8.0f} {pyo.value(modelo_v.x[t]):>8.0f} "
+                 f"{pyo.value(modelo_v.l[t]):>8.0f} {pyo.value(modelo_v.W[t]):>5.0f} "
+                 f"{pyo.value(modelo_v.h[t]):>5.0f} {pyo.value(modelo_v.f[t]):>5.0f} "
+                 f"{pyo.value(modelo_v.P_t[t]):>5.0f} {pyo.value(modelo_v.n[t]):>5.0f} "
+                 f"{pyo.value(modelo_v.m[1,t]):>6.0f} {pyo.value(modelo_v.m[2,t]):>6.0f}"
+                 f"{pyo.value(modelo_v.Y[1,t]):>6.0f} {pyo.value(modelo_v.Y[2,t]):>6.0f}")
+
+        for v in variables_nuevas:
+            var_obj = getattr(modelo_v, v)
+            if t in var_obj: 
+                val = pyo.value(var_obj[t]) or 0 
+                linea += f" {val:>8.0f}"
+            else:
+                linea += f" {'-':>8}" 
+        print(linea)
+        
     return True
 
 modelo_base = construir_modelo()
 resolver(modelo_base, nombre="Modelo Base")
-
-# Richard aca te dejo las plantillas de los codigos, como usarlos mas menos
 
 def demanda_pendiente(mod,t):
     if t==1:
@@ -227,46 +248,40 @@ modelo_a = construir_modelo(
     restricciones_extra=[("demanda_pendiente",pyo.RangeSet(1,T),demanda_pendiente)],
     omitir_restricciones=["demanda"] #con esto deberia eliminarse
 )
-resolver(modelo_a, "Variante a")
-'''
-# Variante a
+resolver(modelo_a,"Variante a")
 
-modelo_a = construir_modelo(
-    restricciones_extra=[("r_nueva", m.T, r_nueva)]  # usa m.T del modelo nuevo
-)
-resolver(modelo_a, "Variante a")
+#no esta listo aun
+def nivel_servicio_variante_c(m,t):
+    return m.l[t] <= m.V_max*m.d[t]*m.i[t]
 
-
-# ── Variante b: param nuevo + FO distinta + restricciones ────────────
-def fo_b(m):
-    return sum(...) # tu nueva FO que puede usar m.C_nuevo
-
-def r_b1(m, t):
-    return ...
+def funcion_objetivo_variante_c(m):
+    return sum(sum(m.C_m[k,t]*m.m[k,t] for k in m.K)+ m.C_I[t]*m.n[t]+ m.C_hire[t]*m.h[t]+ m.C_fire[t]*m.f[t]
+    + m.C_sal[t]*m.W[t]+ m.C_r[t]*m.P_t[t]+ m.C_p[t]*m.x[t]+ m.C_lost[t]*m.l[t] + m.F*m.i[t] for t in m.T)
 
 modelo_b = construir_modelo(
-    restricciones_extra=[
-        ("r_b1", modelo_b.T, r_b1),   # ← ver nota abajo
-    ],
-    params_extra={"C_nuevo": 99999},
-    fo=fo_b,
+    variables_extra=[("i",pyo.RangeSet(1,T), pyo.Binary)], #aca
+    funcion_objetivo=funcion_objetivo_variante_c,
+    restricciones_extra=[("nivel_servicio_variante_b",pyo.RangeSet(1,T),nivel_servicio_variante_c)],
+    parametros_extra={"F":generar_normal(1000,1000*0.05)},
+    omitir_restricciones=["nivel_servicio"] #con esto deberia eliminarse
 )
-resolver(modelo_b, "Variante b")
+resolver(modelo_b,"Variante b")
 
 
-# ── Variante c: variable nueva + todo lo anterior ────────────────────
-def fo_c(m):
-    return sum(... + m.s[t] * m.C_nuevo ...)
+#variante c aca
+def nivel_servicio_variante_c(m,t):
+    return m.l[t] <= m.d[t]*(m.V_max + m.j[t]*(1-m.V_max))
 
-def r_c1(m, t):
-    return m.s[t] <= ...
+def funcion_objetivo_variante_c(m):
+    return sum(sum(m.C_m[k,t]*m.m[k,t] for k in m.K)+ m.C_I[t]*m.n[t]+ m.C_hire[t]*m.h[t]+ m.C_fire[t]*m.f[t]
+    + m.C_sal[t]*m.W[t]+ m.C_r[t]*m.P_t[t]+ m.C_p[t]*m.x[t]+ m.C_lost[t]*m.l[t] + m.R*m.j[t] for t in m.T)
 
 modelo_c = construir_modelo(
-    variables_extra=[("s", None, pyo.NonNegativeReals)],  # escalar
-    # o indexada: ("s", modelo_c.T, pyo.NonNegativeReals)  ← ver nota
-    restricciones_extra=[("r_c1", None, r_c1)],
-    params_extra={"C_nuevo": 99999, "otro": 5},
-    fo=fo_c,
+    variables_extra=[("j",pyo.RangeSet(1,T), pyo.Binary)],
+    funcion_objetivo=funcion_objetivo_variante_c,
+    restricciones_extra=[("exceso_demanda",pyo.RangeSet(1,T),nivel_servicio_variante_c)],
+    parametros_extra={"R":generar_normal(1000,1000*0.05)},
+    omitir_restricciones=["nivel_servicio"]
 )
+
 resolver(modelo_c, "Variante c")
-'''
