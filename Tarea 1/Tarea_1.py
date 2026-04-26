@@ -1,4 +1,5 @@
 import numpy as np
+import math
 import pyomo.environ as pyo
 import shutil
 
@@ -10,55 +11,88 @@ M_0 = 8
 Y0 = [2,1]
 P_0 = 1
 
-def generar_normal(mu,sigma,limite_inferior=0, es_entero=True, limite_superior=None):
-    valor = rng.normal(mu,sigma)
-    if es_entero:
-        valor = round(valor)
-    valor = max(limite_inferior, valor)
-    if limite_superior is not None:
-        valor = min(limite_superior, valor)
-    return valor
+def generar_normal(
+    mu,
+    sigma,
+    limite_inferior=None,
+    limite_superior=None,
+    incluir_inferior=True,
+    incluir_superior=True,
+    es_entero=False
+):
+    while True:
+        valor = rng.normal(mu, sigma)
+        if limite_inferior is not None:
+            if incluir_inferior:
+                if valor < limite_inferior:
+                    continue
+            else:
+                if valor <= limite_inferior:
+                    continue
+        if limite_superior is not None:
+            if incluir_superior:
+                if valor > limite_superior:
+                    continue
+            else:
+                if valor >= limite_superior:
+                    continue
+        if es_entero:
+            valor = round(valor)
+            if limite_inferior is not None:
+                if incluir_inferior:
+                    valor = max(valor, math.ceil(limite_inferior))
+                else:
+                    valor = max(valor, math.floor(limite_inferior) + 1)
+            if limite_superior is not None:
+                if incluir_superior:
+                    valor = min(valor, math.floor(limite_superior))
+                else:
+                    valor = min(valor, math.ceil(limite_superior) - 1)
 
-def generar_uniforme(a,b,es_entero=False):
+        return valor
+
+def generar_uniforme(a,b):
     valor = rng.uniform(a,b)
-    if es_entero:
-        valor = max(0, round(valor))
     return valor
 
 def valor_presente(Variable_contexto):
     lista = [Variable_contexto]
     for t in range(2,T+1):
-        lista.append(Variable_contexto*((1+pi_min)/(1+r))**(t-1))
+        lista.append(round(Variable_contexto*((1+pi_min)/(1+r))**(t-1)))
     return lista
 
-InfProm = generar_normal(0.04,0.002,0.03,False,0.05)
-R = generar_normal(0.10,0.005,0.09,False,0.11)
+InfProm = generar_normal(0.04,0.002,limite_inferior=0.03, limite_superior=0.05)
+R = generar_normal(0.10,0.005,limite_inferior=0.09, limite_superior=0.11)
 pi_min = (1+InfProm)**0.25-1
 r = (1+R)**0.25-1
-d_1 = generar_normal(25000,0.05*25000,1) #original:generar_normal(25000,0.05*25000,1)
-r_t = generar_uniforme(1.02,1.04)
+d_1 = generar_normal(25000,0.05*25000,limite_inferior=1,incluir_inferior=True,es_entero=True)
+r_t = round(generar_uniforme(1.02,1.04))
 d_t = [d_1]
+
 for t in range(2,T+1):
     d_t.append(round(d_t[-1]*r_t))
     r_t = generar_uniforme(1.02,1.04)
-
-rho_1 = generar_normal(6000,0.05*6000)
-rho_2 = generar_normal(11500,0.05*11500)
+rho_1 = generar_normal(6000,0.05*6000,limite_inferior=0,incluir_inferior=False,es_entero=True)
+rho_2 = generar_normal(11500,0.05*11500,limite_inferior=0,incluir_inferior=False,es_entero=True)
 Capacidad = [rho_1,rho_2]
-alfa = generar_normal(0.1,0.15*0.1,es_entero=False)
-S_p = generar_normal(100,0.05*100,es_entero=False)
-S_yk = [generar_normal(15,0.05 * 15,es_entero=False) for _ in range(2)]
-S_m = generar_normal(6,6*0.05, es_entero=False)
+alfa = generar_normal(0.1,0.15*0.1,limite_inferior=0,incluir_inferior=False,es_entero=True)
+S_p = generar_normal(100,0.05*100,limite_inferior=0,incluir_inferior=False)
+S_yk = []
+for _ in range(2):
+    S_yk.append(generar_normal(15,0.05*15,limite_inferior=0,incluir_inferior=False))
+S_m = generar_normal(6,6*0.05,limite_inferior=0,incluir_inferior=False)
 
-C_m11 = generar_normal(18000000,18000000*0.05)
-C_m21 = generar_normal(32000000,32000000*0.05)
-C_hire1 = generar_normal(500000,500000*0.05)
-C_fire1 = generar_normal(1800000,1800000*0.05)
-C_sal1 = generar_normal(7200000,7200000*0.03)
-C_r1 = generar_normal(15000000,15000000*0.05)
-C_I1 = generar_normal(45000000,45000000*0.05)
-C_p1 = generar_normal(2500,2500*0.05)
-C_lost1 = generar_normal(12000,12_000*0.05)
+print("Parametros operativos del sistema y reglas de generación listos")
+
+C_m11 = generar_normal(18000000,18000000*0.05,es_entero=True)
+C_m21 = generar_normal(32000000,32000000*0.05,es_entero=True)
+C_hire1 = generar_normal(500000,500000*0.05,es_entero=True)
+C_fire1 = generar_normal(1800000,1800000*0.05,es_entero=True)
+C_sal1 = generar_normal(7200000,7200000*0.03,es_entero=True)
+C_r1 = generar_normal(15000000,15000000*0.05,es_entero=True)
+C_I1 = generar_normal(45000000,45000000*0.05,es_entero=True)
+C_p1 = generar_normal(2500,2500*0.05,es_entero=True)
+C_lost1 = generar_normal(12000,12000*0.05,es_entero=True)
 
 C_m1_vp = valor_presente(C_m11)
 C_m2_vp = valor_presente(C_m21)
@@ -92,10 +126,10 @@ def balance_operarios(mod, t):
 def plantas_activas(mod,t):
     if t == 1:
         return mod.P_t[t] == P_0 + mod.n[t]
-    return mod.P_t[t] == mod.P_t[t - 1] + mod.n[t]
+    return mod.P_t[t] == mod.P_t[t-1] + mod.n[t]
 
 def restriccion_espacio(mod,t):
-    return (sum(mod.S_yk[k]*mod.Y[k, t] for k in mod.K) + mod.S_m*mod.W[t]<= mod.u*mod.S_p*mod.P_t[t])
+    return (sum(mod.S_yk[k]*mod.Y[k,t] for k in mod.K) + mod.S_m*mod.W[t]<= mod.u*mod.S_p*mod.P_t[t])
 
 def nivel_servicio(m, t):
     return m.l[t] <= m.V_max*m.d[t]
@@ -107,8 +141,8 @@ def sobrecapacidad_prod_mano_obra(m,t):
     return m.H*m.W[t]/m.alfa <= (1+m.O_max)*m.d[t]
 
 def funcion_objetivo_original(m):
-    return sum(sum(m.C_m[k,t]*m.m[k,t] for k in m.K)+ m.C_I[t]*m.n[t]+ m.C_hire[t]*m.h[t]+ m.C_fire[t]*m.f[t]
-    + m.C_sal[t]*m.W[t]+ m.C_r[t]*m.P_t[t]+ m.C_p[t]*m.x[t]+ m.C_lost[t]*m.l[t] for t in m.T)
+    return sum(sum(m.C_m[k,t]*m.m[k,t] for k in m.K) + m.C_I[t]*m.n[t] + m.C_hire[t]*m.h[t] + m.C_fire[t]*m.f[t]
+    + m.C_sal[t]*m.W[t] + m.C_r[t]*m.P_t[t] + m.C_p[t]*m.x[t] + m.C_lost[t]*m.l[t] for t in m.T)
 
 def construir_modelo(
     restricciones_extra=None,variables_extra=None,funcion_objetivo=None, parametros_extra=None, 
@@ -149,13 +183,12 @@ def construir_modelo(
     mod.W = pyo.Var(mod.T,domain=pyo.PositiveIntegers)
     mod.n = pyo.Var(mod.T,domain=pyo.NonNegativeIntegers)
     mod.P_t = pyo.Var(mod.T,domain=pyo.PositiveIntegers)
-
     if variables_extra:
         for nombre, indices, domain in variables_extra:
             if indices is None:
                 mod.add_component(nombre,pyo.Var(domain=domain))
             elif isinstance(indices,tuple):
-                mod.add_component(nombre, pyo.Var(*indices,domain=domain))
+                mod.add_component(nombre,pyo.Var(*indices,domain=domain))
             else:
                 mod.add_component(nombre,pyo.Var(indices,domain=domain))
 
@@ -171,7 +204,6 @@ def construir_modelo(
     mod.nivel_servicio = pyo.Constraint(mod.T,rule=nivel_servicio)
     mod.sobrecapacidad_prod_maquinas = pyo.Constraint(mod.T,rule=sobrecapacidad_prod_maquinas)
     mod.sobrecapacidad_prod_mano_obra = pyo.Constraint(mod.T,rule=sobrecapacidad_prod_mano_obra)
-
     if restricciones_extra:
         for nombre,indices,rule in restricciones_extra:
             if indices is None:
@@ -187,7 +219,7 @@ def construir_modelo(
 
 cbc_path = shutil.which("cbc")
 if cbc_path is None:
-    raise RuntimeError("CBC no está instalado o no está en el PATH")
+    raise RuntimeError("CBC no se encuentra")
 solver = pyo.SolverFactory('cbc', executable=cbc_path)
 
 def resolver(modelo_v, nombre=""):
@@ -199,7 +231,7 @@ def resolver(modelo_v, nombre=""):
     print(f"  {nombre}")
     print(f"  Costo total VP: {pyo.value(modelo_v.objetivo):,.0f} CLP")
     print(f"{'─'*60}")
-    variables_base = {'x', 'l', 'm', 'Y', 'h', 'f', 'W', 'n', 'P_t'}
+    variables_base = {"x","l","m","Y","h","f","W","n","P_t"}
     variables_nuevas = []
 
     for var in modelo_v.component_objects(pyo.Var, active=True):
@@ -246,7 +278,7 @@ def demanda_pendiente(mod,t):
 
 modelo_a = construir_modelo(
     restricciones_extra=[("demanda_pendiente",pyo.RangeSet(1,T),demanda_pendiente)],
-    omitir_restricciones=["demanda"] #con esto deberia eliminarse
+    omitir_restricciones=["demanda"]
 )
 resolver(modelo_a,"Variante a")
 
@@ -255,15 +287,15 @@ def nivel_servicio_variante_c(m,t):
     return m.l[t] <= m.V_max*m.d[t]*m.i[t]
 
 def funcion_objetivo_variante_c(m):
-    return sum(sum(m.C_m[k,t]*m.m[k,t] for k in m.K)+ m.C_I[t]*m.n[t]+ m.C_hire[t]*m.h[t]+ m.C_fire[t]*m.f[t]
-    + m.C_sal[t]*m.W[t]+ m.C_r[t]*m.P_t[t]+ m.C_p[t]*m.x[t]+ m.C_lost[t]*m.l[t] + m.F*m.i[t] for t in m.T)
+    return sum(sum(m.C_m[k,t]*m.m[k,t] for k in m.K) + m.C_I[t]*m.n[t] + m.C_hire[t]*m.h[t] + m.C_fire[t]*m.f[t]
+    + m.C_sal[t]*m.W[t] + m.C_r[t]*m.P_t[t] + m.C_p[t]*m.x[t] + m.C_lost[t]*m.l[t] + m.F*m.i[t] for t in m.T)
 
 modelo_b = construir_modelo(
-    variables_extra=[("i",pyo.RangeSet(1,T), pyo.Binary)], #aca
+    variables_extra=[("i",pyo.RangeSet(1,T), pyo.Binary)],
     funcion_objetivo=funcion_objetivo_variante_c,
     restricciones_extra=[("nivel_servicio_variante_b",pyo.RangeSet(1,T),nivel_servicio_variante_c)],
     parametros_extra={"F":generar_normal(1000,1000*0.05)},
-    omitir_restricciones=["nivel_servicio"] #con esto deberia eliminarse
+    omitir_restricciones=["nivel_servicio"]
 )
 resolver(modelo_b,"Variante b")
 
@@ -273,15 +305,15 @@ def nivel_servicio_variante_c(m,t):
     return m.l[t] <= m.d[t]*(m.V_max + m.j[t]*(1-m.V_max))
 
 def funcion_objetivo_variante_c(m):
-    return sum(sum(m.C_m[k,t]*m.m[k,t] for k in m.K)+ m.C_I[t]*m.n[t]+ m.C_hire[t]*m.h[t]+ m.C_fire[t]*m.f[t]
-    + m.C_sal[t]*m.W[t]+ m.C_r[t]*m.P_t[t]+ m.C_p[t]*m.x[t]+ m.C_lost[t]*m.l[t] + m.R*m.j[t] for t in m.T)
+    return sum(sum(m.C_m[k,t]*m.m[k,t] for k in m.K) + m.C_I[t]*m.n[t] + m.C_hire[t]*m.h[t] + m.C_fire[t]*m.f[t]
+    + m.C_sal[t]*m.W[t] + m.C_r[t]*m.P_t[t] + m.C_p[t]*m.x[t] + m.C_lost[t]*m.l[t] + m.R*m.j[t] for t in m.T)
 
 modelo_c = construir_modelo(
-    variables_extra=[("j",pyo.RangeSet(1,T), pyo.Binary)],
+    variables_extra=[("j",pyo.RangeSet(1,T),pyo.Binary)],
     funcion_objetivo=funcion_objetivo_variante_c,
     restricciones_extra=[("exceso_demanda",pyo.RangeSet(1,T),nivel_servicio_variante_c)],
     parametros_extra={"R":generar_normal(1000,1000*0.05)},
     omitir_restricciones=["nivel_servicio"]
 )
 
-resolver(modelo_c, "Variante c")
+resolver(modelo_c,"Variante c")
