@@ -42,13 +42,12 @@ def generar_normal(
                 if incluir_inferior:
                     valor = max(valor, math.ceil(limite_inferior))
                 else:
-                    valor = max(valor, math.floor(limite_inferior) + 1)
+                    valor = max(valor, math.floor(limite_inferior)+1)
             if limite_superior is not None:
                 if incluir_superior:
                     valor = min(valor, math.floor(limite_superior))
                 else:
-                    valor = min(valor, math.ceil(limite_superior) - 1)
-
+                    valor = min(valor, math.ceil(limite_superior)-1)
         return valor
 
 def generar_uniforme(a,b):
@@ -265,8 +264,6 @@ def resolver(modelo_v, nombre=""):
             else:
                 linea += f" {'-':>8}" 
         print(linea)
-        
-    return True
 
 modelo_base = construir_modelo()
 resolver(modelo_base, nombre="Modelo Base")
